@@ -1,0 +1,70 @@
+#!/bin/bash
+mysql_port=3308
+mysql_username="root"
+mysql_password="password"
+mysql_sock="/data/${mysql_port}/mysql.sock"
+
+function_start_mysql()
+{
+	if [ ! -e "$mysql_sock" ];then
+    		printf "Starting MySQL...\n"
+		/bin/sh /application/mysql/bin/mysqld_safe --defaults-file=/data/${mysql_port}/my.cnf 2>&1 > /dev/null &
+		sleep 2
+  	else
+    		printf "MySQL is running...\n"
+    		exit
+  	fi
+}
+function_stop_mysql()
+{
+	if [ ! -e "$mysql_sock" ];then
+     		printf "MySQL is stopped...\n"
+     		exit
+  	else
+		printf "Stoping MySQL...\n"
+		/application/mysql/bin/mysqladmin -u ${mysql_username} -p${mysql_password} -S /data/${mysql_port}/mysql.sock shutdown
+		sleep 2
+   	fi
+}
+function_restart_mysql()
+{
+	printf "Restarting MySQL...\n"
+	if [ -e "$mysql_sock" ]; then
+		printf "Stoping MySQL...\n"
+                /application/mysql/bin/mysqladmin -u ${mysql_username} -p${mysql_password} -S /data/${mysql_port}/mysql.sock shutdown
+                sleep 2
+		printf "Starting MySQL...\n"
+                /bin/sh /application/mysql/bin/mysqld_safe --defaults-file=/data/${mysql_port}/my.cnf 2>&1 > /dev/null &
+                sleep 2
+	else
+		printf "MySQL is stopped...\n"
+		printf "Trying to start MySQL...\n"
+		/bin/sh /application/mysql/bin/mysqld_safe --defaults-file=/data/${mysql_port}/my.cnf 2>&1 > /dev/null &
+                sleep 2
+	fi
+	
+		sleep 5
+	if [ -e "$mysql_sock" ]; then
+		printf "Restart MySQL successfully...\n"
+	else
+		printf "Restart MySQL Failed...\n"		
+		exit
+	fi
+}
+function_kill_mysql()
+{
+	kill -9 $(ps -ef | grep 'bin/mysqld_safe' | grep ${mysql_port} | awk '{printf $2}')
+	kill -9 $(ps -ef | grep 'libexec/mysqld' | grep ${mysql_port} | awk '{printf $2}')
+}
+case $1 in
+	start)
+		function_start_mysql;;
+	stop)
+		function_stop_mysql;;
+	kill)
+		function_kill_mysql;;
+	restart)
+		function_restart_mysql;;
+	*)
+		echo "Usage: /data/${mysql_port}/mysqld {start|stop|restart|kill}";;
+esac
